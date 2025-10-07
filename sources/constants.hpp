@@ -2,7 +2,7 @@
 
 namespace Constants{
 
-    constexpr const char *Title{"NaNalyzer"};
+    constexpr const char *Title{"CSV-Completeness-Checker"};
 
 
 } // namespace Constants
