@@ -14,15 +14,14 @@ std::vector<std::string> NaNalyzer::splitString(
     while(std::getline(tokenStream, currentToken, delimiter)){
         std::size_t firstNonWhitespacePosition{currentToken.find_first_not_of(" \t\n\r")};
         if(firstNonWhitespacePosition == std::string::npos){
+            tokens.emplace_back();
             continue;
         }
 
         std::size_t lastNonWhitespacePosition{currentToken.find_last_not_of(" \t\n\r")};
         std::string trimmedToken{currentToken.substr(firstNonWhitespacePosition, lastNonWhitespacePosition - firstNonWhitespacePosition + 1)};
 
-        if(!trimmedToken.empty()){
-            tokens.push_back(trimmedToken);
-        }
+        tokens.push_back(std::move(trimmedToken));
     }
 
     return tokens;
