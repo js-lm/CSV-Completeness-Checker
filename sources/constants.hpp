@@ -2,7 +2,7 @@
 
 namespace Constants{
 
-    constexpr char *Title{"NaNalyzer"};
+    constexpr const char *Title{"NaNalyzer"};
 
 
 } // namespace Constants

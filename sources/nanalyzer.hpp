@@ -26,7 +26,7 @@ public:
     NaNalyzer() = default;
     ~NaNalyzer() = default;
 
-    void run();
+    int run();
 
 private:
     void parseCsv();
@@ -36,6 +36,10 @@ private:
     void process();
 
 private:
+    std::vector<std::string> splitString(const std::string &string, const char delimiter) const;
+
+    void clearInputBuffer() const;
+
     bool isCellValid(const std::string &string, const std::unordered_set<std::string> &invalidValues) const;
 
 };
