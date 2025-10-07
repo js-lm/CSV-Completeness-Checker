@@ -14,7 +14,7 @@ int NaNalyzer::run(){
 		parseCsv();
 		defineInvalidData();
 		defineColumnCombinations();
-		// process();
+		process();
 	}catch(const std::exception &error){
 		fmt::print(stderr, "Fatal error: {}\n", error.what());
 		return 1;
