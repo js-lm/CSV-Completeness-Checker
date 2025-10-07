@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(nanalyzer CXX)
+project(csv-completeness-checker CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -38,6 +38,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fast_cpp_csv_parser)
 
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        v3.12.0
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 
 
 file(GLOB_RECURSE PROJECT_SOURCES
@@ -51,13 +58,12 @@ add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/sources"
-
-    "${magic_enum_SOURCE_DIR}/include/magic_enum"
     ${fast_cpp_csv_parser_SOURCE_DIR}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 
-    fmt
+    fmt::fmt
     magic_enum::magic_enum
     cxxopts::cxxopts
+    nlohmann_json::nlohmann_json
 )

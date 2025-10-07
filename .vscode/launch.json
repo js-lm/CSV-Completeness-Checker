@@ -9,7 +9,7 @@
             "name": "(gdb) Launch Linux",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/build/nanalyzer",
+            "program": "${workspaceRoot}/build/csv-completeness-checker",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
