@@ -1,6 +1,6 @@
-#include <iostream>
+#include "nanalyzer.hpp"
 
 int main(){
-
-    return 0;
+    NaNalyzer nanalyzer;
+    return nanalyzer.run();
 }
