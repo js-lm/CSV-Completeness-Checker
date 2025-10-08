@@ -45,14 +45,40 @@ void NaNalyzer::saveInitializationToJson(const std::string &filePath) const{
 
     nlohmann::json combinationsJson{nlohmann::json::array()};
     for(const auto &combination : columnCombinationsToCheck_){
-        std::vector<int> oneBasedCombination;
-        oneBasedCombination.reserve(combination.size());
+        const bool hasDisjunction{
+            std::any_of(
+                combination.begin(),
+                combination.end(),
+                [](const ColumnDisjunction &clause){ return clause.size() > 1;}
+            )
+        };
 
-        for(const ColumnOffset columnOffset : combination){
-            oneBasedCombination.push_back(columnOffset + 1);
+        if(!hasDisjunction){
+            std::vector<int> flattened;
+            flattened.reserve(combination.size());
+
+            for(const ColumnDisjunction &clause : combination){
+                if(clause.empty()) continue;
+                flattened.push_back(clause.front() + 1);
+            }
+
+            combinationsJson.push_back(std::move(flattened));
+            continue;
         }
 
-        combinationsJson.push_back(std::move(oneBasedCombination));
+        nlohmann::json combinationJson{nlohmann::json::array()};
+        for(const ColumnDisjunction &clause : combination){
+            std::vector<int> clauseIndices;
+            clauseIndices.reserve(clause.size());
+
+            for(const ColumnOffset columnOffset : clause){
+                clauseIndices.push_back(columnOffset + 1);
+            }
+
+            combinationJson.push_back(std::move(clauseIndices));
+        }
+
+        combinationsJson.push_back(std::move(combinationJson));
     }
 
     root["combinations"] = std::move(combinationsJson);
@@ -140,26 +166,87 @@ void NaNalyzer::loadInitializationFromJson(const std::string &filePath){
             if(!combinationJson.is_array()) continue;
 
             ColumnCombination combination;
-            combination.reserve(combinationJson.size());
 
-            for(const auto &value : combinationJson){
-                int fieldNumber{value.get<int>()};
-                int zeroBasedIndex{fieldNumber >= 1 ? fieldNumber - 1 : fieldNumber};
+            const bool isLegacyFormat{
+                std::all_of(
+                    combinationJson.begin(),
+                    combinationJson.end(),
+                    [](const nlohmann::json &entry){ return entry.is_number_integer();}
+                )
+            };
 
-                if(zeroBasedIndex < 0 || zeroBasedIndex >= static_cast<int>(headers_.size())){
-                    throw std::runtime_error{fmt::format("Field number {} in combinations is out of range.", fieldNumber)};
+            if(isLegacyFormat){
+                combination.reserve(combinationJson.size());
+
+                for(const auto &value : combinationJson){
+                    int fieldNumber{value.get<int>()};
+                    const int zeroBasedIndex{fieldNumber - 1};
+
+                    if(zeroBasedIndex < 0 || zeroBasedIndex >= static_cast<int>(headers_.size())){
+                        throw std::runtime_error{fmt::format("Field number {} in combinations is out of range.", fieldNumber)};
+                    }
+
+                    if(!columns_.contains(fieldNumber)){
+                        throw std::runtime_error{fmt::format("Combination references field {} which is not selected.", fieldNumber)};
+                    }
+
+                    ColumnDisjunction clause;
+                    clause.push_back(zeroBasedIndex);
+                    combination.push_back(std::move(clause));
                 }
+            }else{
+                combination.reserve(combinationJson.size());
 
-                if(!columns_.contains(zeroBasedIndex + 1)){
-                    throw std::runtime_error{fmt::format("Combination references field {} which is not selected.", fieldNumber)};
+                for(const auto &clauseJson : combinationJson){
+                    ColumnDisjunction clause;
+
+                    if(clauseJson.is_number_integer()){
+                        int fieldNumber{clauseJson.get<int>()};
+                        const int zeroBasedIndex{fieldNumber - 1};
+
+                        if(zeroBasedIndex < 0 || zeroBasedIndex >= static_cast<int>(headers_.size())){
+                            throw std::runtime_error{fmt::format("Field number {} in combinations is out of range.", fieldNumber)};
+                        }
+
+                        if(!columns_.contains(fieldNumber)){
+                            throw std::runtime_error{fmt::format("Combination references field {} which is not selected.", fieldNumber)};
+                        }
+
+                        clause.push_back(zeroBasedIndex);
+                    }else if(clauseJson.is_array()){
+                        for(const auto &value : clauseJson){
+                            if(!value.is_number_integer()){
+                                throw std::runtime_error{"Combination entries must be integers."};
+                            }
+
+                            int fieldNumber{value.get<int>()};
+                            const int zeroBasedIndex{fieldNumber - 1};
+
+                            if(zeroBasedIndex < 0 || zeroBasedIndex >= static_cast<int>(headers_.size())){
+                                throw std::runtime_error{fmt::format("Field number {} in combinations is out of range.", fieldNumber)};
+                            }
+
+                            if(!columns_.contains(fieldNumber)){
+                                throw std::runtime_error{fmt::format("Combination references field {} which is not selected.", fieldNumber)};
+                            }
+
+                            clause.push_back(zeroBasedIndex);
+                        }
+                    }else{
+                        throw std::runtime_error{"Combination groups must be integers or arrays of integers."};
+                    }
+
+                    if(clause.empty()){
+                        throw std::runtime_error{"Encountered an empty combination group in JSON configuration."};
+                    }
+
+                    std::sort(clause.begin(), clause.end());
+                    clause.erase(std::unique(clause.begin(), clause.end()), clause.end());
+                    combination.push_back(std::move(clause));
                 }
-
-                combination.push_back(zeroBasedIndex);
             }
 
             if(!combination.empty()){
-                std::sort(combination.begin(), combination.end());
-                combination.erase(std::unique(combination.begin(), combination.end()), combination.end());
                 columnCombinationsToCheck_.push_back(std::move(combination));
             }
         }

@@ -8,11 +8,16 @@
 class NaNalyzer{
     using ColumnOffset = int;   // 0 based position in headers_ and CSV rows
     using ColumnNumber = int;   // 1 based identifier presented to users
+
     using FilePath = std::string;
+    
     using HeaderList = std::vector<std::string>;
     using InvalidValueSet = std::unordered_set<std::string>;
-    using ColumnCombination = std::vector<ColumnOffset>;
+
+    using ColumnDisjunction = std::vector<ColumnOffset>; // OR group
+    using ColumnCombination = std::vector<ColumnDisjunction>; // AND of OR groups
     using CombinationList = std::vector<ColumnCombination>;
+
     using ValidCounts = std::vector<long long int>;
 
 private:
@@ -56,5 +61,7 @@ private:
     void clearInputBuffer() const;
 
     bool isCellValid(const std::string &string, const InvalidValueSet &invalidValues) const;
+
+    std::string formatCombinationForDisplay(const ColumnCombination &combination) const;
 
 };

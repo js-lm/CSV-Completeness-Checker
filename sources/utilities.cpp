@@ -4,6 +4,9 @@
 #include <iostream>
 #include <limits>
 
+#include <fmt/core.h>
+#include <fmt/ranges.h>
+
 NaNalyzer::DelimitedStringList NaNalyzer::splitString(
     const std::string &string, const char delimiter
 ) const{
@@ -36,4 +39,24 @@ bool NaNalyzer::isCellValid(
 
 void NaNalyzer::clearInputBuffer() const{
 	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
+std::string NaNalyzer::formatCombinationForDisplay(
+    const ColumnCombination &combination
+) const{
+    std::vector<std::string> clauseStrings;
+    clauseStrings.reserve(combination.size());
+
+    for(const auto &disjunction : combination){
+        std::vector<int> displayIndices;
+        displayIndices.reserve(disjunction.size());
+
+        for(const ColumnOffset columnOffset : disjunction){
+            displayIndices.push_back(columnOffset + 1);
+        }
+
+        clauseStrings.push_back(fmt::format("{}", fmt::join(displayIndices, "/")));
+    }
+
+    return fmt::format("{}", fmt::join(clauseStrings, ":"));
 }

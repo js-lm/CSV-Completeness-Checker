@@ -32,25 +32,29 @@ void NaNalyzer::process(){
 
 		for(std::size_t combinationIndex{0}; combinationIndex < columnCombinationsToCheck_.size(); combinationIndex++){
 			const ColumnCombination &columnCombination{columnCombinationsToCheck_[combinationIndex]};
-			bool areAllFieldsValid{true};
+			bool isCombinationSatisfied{true};
 
-			for(const ColumnOffset columnOffset : columnCombination){
-				const Column &columnDefinition{columns_.at(columnOffset + 1)};
-				
-				if(columnOffset >= static_cast<int>(rowFields.size())){
-					areAllFieldsValid = false;
-					break;
+			for(const ColumnDisjunction &clause : columnCombination){
+				bool isClauseSatisfied{false};
+
+				for(const ColumnOffset columnOffset : clause){
+					const Column &columnDefinition{columns_.at(columnOffset + 1)};
+
+					if(columnOffset >= static_cast<int>(rowFields.size())) continue;
+
+					if(isCellValid(rowFields[columnOffset], columnDefinition.invalidValues)){
+						isClauseSatisfied = true;
+						break;
+					}
 				}
-				
-				if(!isCellValid(rowFields[columnOffset], columnDefinition.invalidValues)){
-					areAllFieldsValid = false;
+
+				if(!isClauseSatisfied){
+					isCombinationSatisfied = false;
 					break;
 				}
 			}
 
-			if(areAllFieldsValid){
-				validCounts_[combinationIndex] += 1;
-			}
+			if(isCombinationSatisfied) validCounts_[combinationIndex] += 1;
 		}
 	}
 
@@ -65,13 +69,6 @@ void NaNalyzer::process(){
 	fmt::println("Processed {} data rows.\n", totalRowCount);
 
 	for(std::size_t combinationIndex{0}; combinationIndex < columnCombinationsToCheck_.size(); combinationIndex++){
-		std::vector<int> displayIndices;
-		displayIndices.reserve(columnCombinationsToCheck_[combinationIndex].size());
-
-		for(const ColumnOffset columnOffset : columnCombinationsToCheck_[combinationIndex]){
-			displayIndices.push_back(columnOffset + 1);
-		}
-
 		const long long int validRowCount{validCounts_[combinationIndex]};
 		double completenessPercentage{.0};
 		if(totalRowCount > 0){
@@ -80,7 +77,7 @@ void NaNalyzer::process(){
 
 		fmt::println(
 			"[{}] : {} / {} ({:.2f}%)",
-			fmt::join(displayIndices, ":"),
+			formatCombinationForDisplay(columnCombinationsToCheck_[combinationIndex]),
 			validRowCount,
 			totalRowCount,
 			completenessPercentage

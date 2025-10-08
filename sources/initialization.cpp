@@ -96,14 +96,7 @@ void NaNalyzer::parseCsv(){
 	if(configurationLoadedFromJson_ && !columnCombinationsToCheck_.empty()){
 		fmt::println("\n--- Field combinations loaded from configuration ---");
 		for(const auto &combination : columnCombinationsToCheck_){
-			std::vector<int> displayIndices;
-			displayIndices.reserve(combination.size());
-
-			for(const ColumnOffset columnOffset : combination){
-				displayIndices.push_back(columnOffset + 1);
-			}
-
-			fmt::println("[{}]", fmt::join(displayIndices, ":"));
+			fmt::println("[{}]", formatCombinationForDisplay(combination));
 		}
 	}
 }
@@ -201,20 +194,14 @@ void NaNalyzer::defineColumnCombinations(){
 	if(configurationLoadedFromJson_ && !columnCombinationsToCheck_.empty()){
 		fmt::println("\n--- Field combinations loaded from configuration ---");
 		for(const auto &combination : columnCombinationsToCheck_){
-			std::vector<int> displayIndices;
-			displayIndices.reserve(combination.size());
-
-			for(const ColumnOffset columnOffset : combination){
-				displayIndices.push_back(columnOffset + 1);
-			}
-
-			fmt::println("[{}]", fmt::join(displayIndices, ":"));
+			fmt::println("[{}]", formatCombinationForDisplay(combination));
 		}
 		return;
 	}
 
 	fmt::println("\n--- Define Field Combinations ---");
 	fmt::println("Enter combinations of the field numbers above, separated by colons (e.g., 1:3 or 1:3:4).");
+	fmt::println("Use '/' inside a group to indicate alternatives (e.g., 1:2:3/4 requires 1, 2, and either 3 or 4).");
 
 	std::vector<int> sortedColumnIdentifiers;
 	sortedColumnIdentifiers.reserve(columns_.size());
@@ -232,7 +219,7 @@ void NaNalyzer::defineColumnCombinations(){
 		);
 	}
 
-	fmt::println("Provide all combinations as a single comma separated list (e.g., 1, 3, 1:3), or press Enter to use the default above.");
+	fmt::println("Provide all combinations as a single comma separated list (e.g., 1, 3/4:5, 1:2:3/4), or press Enter to use the default above.");
 
 	clearInputBuffer();
 	std::string combinationInput;
@@ -258,7 +245,9 @@ void NaNalyzer::defineColumnCombinations(){
 
 		for(const int columnIdentifier : sortedColumnIdentifiers){
 			const Column &columnDefinition{columns_.at(columnIdentifier)};
-			defaultCombination.push_back(columnDefinition.index);
+			ColumnDisjunction clause;
+			clause.push_back(columnDefinition.index);
+			defaultCombination.push_back(std::move(clause));
 		}
 
 		columnCombinationsToCheck_.push_back(std::move(defaultCombination));
@@ -272,34 +261,67 @@ void NaNalyzer::defineColumnCombinations(){
 	DelimitedStringList combinationStrings{splitString(combinationInput, ',')};
 
 	for(const std::string &combinationString : combinationStrings){
-		DelimitedStringList indexStrings{splitString(combinationString, ':')};
+		DelimitedStringList clauseStrings{splitString(combinationString, ':')};
 
-		if(indexStrings.empty()) continue;
-		
+		if(clauseStrings.empty()) continue;
 
 		ColumnCombination currentCombination;
-		currentCombination.reserve(indexStrings.size());
+		currentCombination.reserve(clauseStrings.size());
 		bool isCombinationValid{true};
 
-		for(const std::string &indexString : indexStrings){
-			try{
-				int fieldNumber{std::stoi(indexString)};
-				if(!columns_.contains(fieldNumber)){
-					fmt::println(stderr, "Field number {} in '{}' was not selected. Skipping this combination.", fieldNumber, combinationString);
+		for(const std::string &clauseString : clauseStrings){
+			if(clauseString.empty()){
+				fmt::println(stderr, "Empty field group found in '{}'. Skipping this combination.", combinationString);
+				isCombinationValid = false;
+				break;
+			}
+
+			DelimitedStringList candidateStrings{splitString(clauseString, '/')};
+			if(candidateStrings.empty()){
+				isCombinationValid = false;
+				break;
+			}
+
+			ColumnDisjunction disjunction;
+			disjunction.reserve(candidateStrings.size());
+
+			for(const std::string &candidate : candidateStrings){
+				if(candidate.empty()){
+					fmt::println(stderr, "Empty field entry in group '{}' within '{}'.", clauseString, combinationString);
 					isCombinationValid = false;
 					break;
 				}
 
-				currentCombination.push_back(fieldNumber - 1);
-			}catch(const std::exception &){
-				fmt::println(stderr, "Invalid number '{}' in combination. Skipping.\n", indexString);
+				try{
+					int fieldNumber{std::stoi(candidate)};
+					if(!columns_.contains(fieldNumber)){
+						fmt::println(stderr, "Field number {} in '{}' was not selected. Skipping this combination.", fieldNumber, combinationString);
+						isCombinationValid = false;
+						break;
+					}
+
+					const int zeroBasedIndex{fieldNumber - 1};
+					disjunction.push_back(zeroBasedIndex);
+				}catch(const std::exception &){
+					fmt::println(stderr, "Invalid number '{}' in combination '{}'. Skipping.", candidate, combinationString);
+					isCombinationValid = false;
+					break;
+				}
+			}
+
+			if(!isCombinationValid) break;
+
+			if(disjunction.empty()){
 				isCombinationValid = false;
 				break;
 			}
+
+			std::sort(disjunction.begin(), disjunction.end());
+			disjunction.erase(std::unique(disjunction.begin(), disjunction.end()), disjunction.end());
+			currentCombination.push_back(std::move(disjunction));
 		}
 
 		if(isCombinationValid && !currentCombination.empty()){
-			std::sort(currentCombination.begin(), currentCombination.end());
 			columnCombinationsToCheck_.push_back(std::move(currentCombination));
 		}
 	}
