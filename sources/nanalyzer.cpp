@@ -43,7 +43,7 @@ int NaNalyzer::run(){
 
 		if(configurationLoadedFromJson_){
 			fmt::print("\nProceed to processing the CSV now? (Y/n): ");
-			std::string response{};
+			std::string response;
 			std::getline(std::cin, response);
 			shouldProcess = parseYesNo(response, true);
 		}else{

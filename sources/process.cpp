@@ -28,21 +28,21 @@ void NaNalyzer::process(){
 	while((currentLine = csvLineReader.next_line()) != nullptr){
 		totalRowCount += 1;
 		
-		std::vector<std::string> rowFields{splitString(std::string{currentLine}, ',')};
+		DelimitedStringList rowFields{splitString(std::string{currentLine}, ',')};
 
 		for(std::size_t combinationIndex{0}; combinationIndex < columnCombinationsToCheck_.size(); combinationIndex++){
-			const std::vector<ColumnIndex> &columnCombination{columnCombinationsToCheck_[combinationIndex]};
+			const ColumnCombination &columnCombination{columnCombinationsToCheck_[combinationIndex]};
 			bool areAllFieldsValid{true};
 
-			for(const ColumnIndex columnIndexZeroBased : columnCombination){
-				const Column &columnDefinition{columns_.at(columnIndexZeroBased + 1)};
+			for(const ColumnOffset columnOffset : columnCombination){
+				const Column &columnDefinition{columns_.at(columnOffset + 1)};
 				
-				if(columnIndexZeroBased >= static_cast<int>(rowFields.size())){
+				if(columnOffset >= static_cast<int>(rowFields.size())){
 					areAllFieldsValid = false;
 					break;
 				}
 				
-				if(!isCellValid(rowFields[columnIndexZeroBased], columnDefinition.invalidValues)){
+				if(!isCellValid(rowFields[columnOffset], columnDefinition.invalidValues)){
 					areAllFieldsValid = false;
 					break;
 				}
@@ -65,11 +65,11 @@ void NaNalyzer::process(){
 	fmt::println("Processed {} data rows.\n", totalRowCount);
 
 	for(std::size_t combinationIndex{0}; combinationIndex < columnCombinationsToCheck_.size(); combinationIndex++){
-		std::vector<int> displayIndices{};
+		std::vector<int> displayIndices;
 		displayIndices.reserve(columnCombinationsToCheck_[combinationIndex].size());
 
-		for(const ColumnIndex columnIndexZeroBased : columnCombinationsToCheck_[combinationIndex]){
-			displayIndices.push_back(columnIndexZeroBased + 1);
+		for(const ColumnOffset columnOffset : columnCombinationsToCheck_[combinationIndex]){
+			displayIndices.push_back(columnOffset + 1);
 		}
 
 		double completenessPercentage{.0};

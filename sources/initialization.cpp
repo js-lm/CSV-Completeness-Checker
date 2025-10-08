@@ -99,8 +99,8 @@ void NaNalyzer::parseCsv(){
 			std::vector<int> displayIndices;
 			displayIndices.reserve(combination.size());
 
-			for(const ColumnIndex columnIndexZeroBased : combination){
-				displayIndices.push_back(columnIndexZeroBased + 1);
+			for(const ColumnOffset columnOffset : combination){
+				displayIndices.push_back(columnOffset + 1);
 			}
 
 			fmt::println("[{}]", fmt::join(displayIndices, ":"));
@@ -169,8 +169,8 @@ void NaNalyzer::defineInvalidData(){
 			columnDefinition.index = fieldNumber - 1;
 			columnDefinition.name = headers_[fieldNumber - 1];
 
-			std::vector<std::string> invalidValuesList{splitString(invalidValuesInput, ',')};
-			columnDefinition.invalidValues = std::unordered_set<std::string>{invalidValuesList.begin(), invalidValuesList.end()};
+			DelimitedStringList invalidValuesList{splitString(invalidValuesInput, ',')};
+			columnDefinition.invalidValues = InvalidValueSet{invalidValuesList.begin(), invalidValuesList.end()};
 
 			columns_.emplace(fieldNumber, std::move(columnDefinition));
 			fmt::println("Added field: {}", headers_[fieldNumber - 1]);
@@ -204,8 +204,8 @@ void NaNalyzer::defineColumnCombinations(){
 			std::vector<int> displayIndices;
 			displayIndices.reserve(combination.size());
 
-			for(const ColumnIndex columnIndexZeroBased : combination){
-				displayIndices.push_back(columnIndexZeroBased + 1);
+			for(const ColumnOffset columnOffset : combination){
+				displayIndices.push_back(columnOffset + 1);
 			}
 
 			fmt::println("[{}]", fmt::join(displayIndices, ":"));
@@ -223,16 +223,16 @@ void NaNalyzer::defineColumnCombinations(){
 
 	columnCombinationsToCheck_.clear();
 
-	std::vector<std::string> combinationStrings{splitString(combinationInput, ',')};
+	DelimitedStringList combinationStrings{splitString(combinationInput, ',')};
 
 	for(const std::string &combinationString : combinationStrings){
-		std::vector<std::string> indexStrings{splitString(combinationString, ':')};
+		DelimitedStringList indexStrings{splitString(combinationString, ':')};
 
 		if(indexStrings.empty()){
 			continue;
 		}
 
-		std::vector<ColumnIndex> currentCombination;
+		ColumnCombination currentCombination;
 		currentCombination.reserve(indexStrings.size());
 		bool isCombinationValid{true};
 
