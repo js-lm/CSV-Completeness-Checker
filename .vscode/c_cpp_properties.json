@@ -3,18 +3,9 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/sources/**",
-                "${workspaceFolder}/build/_deps/magic_enum-src/include",
-                "${workspaceFolder}/build/_deps/fmt-src/include"
+                "${workspaceFolder}/sources/**"
             ],
-            "defines": [
-                "FMT_SHARED",
-                "ASSETS_PATH=\"${workspaceFolder}/assets/\"",
-                "CMAKE_BUILD_TYPE=Debug",
-                "GRAPHICS_API_OPENGL_33",
-                "PLATFORM_DESKTOP",
-                "DEBUG"
-            ],
+            "defines": [],
             "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
             "cppStandard": "c++20",

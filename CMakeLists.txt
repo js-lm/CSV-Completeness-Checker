@@ -12,25 +12,11 @@ include(FetchContent)
 
 
 FetchContent_Declare(
-    magic_enum
-    GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
-    GIT_TAG        v0.9.7
-)
-FetchContent_MakeAvailable(magic_enum)
-
-FetchContent_Declare(
     fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
     GIT_TAG        12.0.0
 )
 FetchContent_MakeAvailable(fmt)
-
-FetchContent_Declare(
-    cxxopts
-    GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
-    GIT_TAG        v3.3.1
-)
-FetchContent_MakeAvailable(cxxopts)
 
 FetchContent_Declare(
     fast_cpp_csv_parser
@@ -63,7 +49,5 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     fmt::fmt
-    magic_enum::magic_enum
-    cxxopts::cxxopts
     nlohmann_json::nlohmann_json
 )
