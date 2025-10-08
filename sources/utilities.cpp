@@ -4,10 +4,10 @@
 #include <iostream>
 #include <limits>
 
-std::vector<std::string> NaNalyzer::splitString(
+NaNalyzer::DelimitedStringList NaNalyzer::splitString(
     const std::string &string, const char delimiter
 ) const{
-    std::vector<std::string> tokens;
+    DelimitedStringList tokens;
     std::string currentToken;
     std::istringstream tokenStream{string};
 
@@ -29,7 +29,7 @@ std::vector<std::string> NaNalyzer::splitString(
 
 bool NaNalyzer::isCellValid(
     const std::string &string, 
-    const std::unordered_set<std::string> &invalidValues
+    const InvalidValueSet &invalidValues
 ) const{
     return !string.empty() && invalidValues.find(string) == invalidValues.end();
 }

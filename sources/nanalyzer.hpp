@@ -6,21 +6,29 @@
 #include <unordered_map>
 
 class NaNalyzer{
-    using ColumnIndex = int;
+    using ColumnOffset = int;   // 0 based position in headers_ and CSV rows
+    using ColumnNumber = int;   // 1 based identifier presented to users
+    using FilePath = std::string;
+    using HeaderList = std::vector<std::string>;
+    using InvalidValueSet = std::unordered_set<std::string>;
+    using ColumnCombination = std::vector<ColumnOffset>;
+    using CombinationList = std::vector<ColumnCombination>;
+    using ValidCounts = std::vector<long long int>;
 
 private:
-    std::string csvFilePath_;
+    FilePath csvFilePath_;
 
-    std::vector<std::string> headers_;
+    HeaderList headers_;
     struct Column{
-        ColumnIndex index; // 0 based corresponding to headers_
+        ColumnOffset index; // 0 based corresponding to headers_
         std::string name;
-        std::unordered_set<std::string> invalidValues;
+        InvalidValueSet invalidValues;
     };
-    std::unordered_map<ColumnIndex, Column> columns_;
+    using ColumnMap = std::unordered_map<ColumnNumber, Column>;
+    ColumnMap columns_;
 
-    std::vector<std::vector<ColumnIndex>> columnCombinationsToCheck_;
-    std::vector<long long int> validCounts_;
+    CombinationList columnCombinationsToCheck_;
+    ValidCounts validCounts_;
 
 private:
     bool configurationLoadedFromJson_{false};
@@ -31,8 +39,8 @@ public:
 
     int run();
 
-    void saveInitializationToJson(const std::string &filePath) const;
-    void loadInitializationFromJson(const std::string &filePath);
+    void saveInitializationToJson(const FilePath &filePath) const;
+    void loadInitializationFromJson(const FilePath &filePath);
 
 private:
     void parseCsv();
@@ -42,10 +50,11 @@ private:
     void process();
 
 private:
-    std::vector<std::string> splitString(const std::string &string, const char delimiter) const;
+    using DelimitedStringList = std::vector<std::string>;
+    DelimitedStringList splitString(const std::string &string, const char delimiter) const;
 
     void clearInputBuffer() const;
 
-    bool isCellValid(const std::string &string, const std::unordered_set<std::string> &invalidValues) const;
+    bool isCellValid(const std::string &string, const InvalidValueSet &invalidValues) const;
 
 };

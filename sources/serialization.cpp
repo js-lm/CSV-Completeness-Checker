@@ -34,7 +34,7 @@ void NaNalyzer::saveInitializationToJson(const std::string &filePath) const{
         columnJson["field_number"] = fieldNumber;
         columnJson["name"] = columnDefinition.name;
 
-        std::vector<std::string> invalidValues{columnDefinition.invalidValues.begin(), columnDefinition.invalidValues.end()};
+        DelimitedStringList invalidValues{columnDefinition.invalidValues.begin(), columnDefinition.invalidValues.end()};
         std::sort(invalidValues.begin(), invalidValues.end());
         columnJson["invalid_values"] = std::move(invalidValues);
 
@@ -48,8 +48,8 @@ void NaNalyzer::saveInitializationToJson(const std::string &filePath) const{
         std::vector<int> oneBasedCombination;
         oneBasedCombination.reserve(combination.size());
 
-        for(const ColumnIndex columnIndexZeroBased : combination){
-            oneBasedCombination.push_back(columnIndexZeroBased + 1);
+        for(const ColumnOffset columnOffset : combination){
+            oneBasedCombination.push_back(columnOffset + 1);
         }
 
         combinationsJson.push_back(std::move(oneBasedCombination));
@@ -95,13 +95,13 @@ void NaNalyzer::loadInitializationFromJson(const std::string &filePath){
         throw std::runtime_error{"No header line found in CSV file referenced by configuration."};
     }
 
-    std::vector<std::string> actualHeaders{splitString(std::string{headerLine}, ',')};
+    HeaderList actualHeaders{splitString(std::string{headerLine}, ',')};
     if(actualHeaders.empty()){
         throw std::runtime_error{"CSV file referenced by configuration does not contain any headers."};
     }
 
     if(root.contains("headers")){
-        const std::vector<std::string> headersFromJson{root["headers"].get<std::vector<std::string>>()};
+        const HeaderList headersFromJson{root["headers"].get<HeaderList>()};
         if(!headersFromJson.empty() && headersFromJson != actualHeaders){
             throw std::runtime_error{"Headers in JSON configuration do not match the CSV file."};
         }
@@ -126,11 +126,11 @@ void NaNalyzer::loadInitializationFromJson(const std::string &filePath){
             columnDefinition.index = fieldNumber - 1;
             columnDefinition.name = columnJson.value("name", headers_[columnDefinition.index]);
 
-            std::vector<std::string> invalidValues;
+            DelimitedStringList invalidValues;
             if(columnJson.contains("invalid_values")){
-                invalidValues = columnJson["invalid_values"].get<std::vector<std::string>>();
+                invalidValues = columnJson["invalid_values"].get<DelimitedStringList>();
             }
-            columnDefinition.invalidValues = std::unordered_set<std::string>{invalidValues.begin(), invalidValues.end()};
+            columnDefinition.invalidValues = InvalidValueSet{invalidValues.begin(), invalidValues.end()};
 
             columns_.emplace(fieldNumber, std::move(columnDefinition));
         }
@@ -143,7 +143,7 @@ void NaNalyzer::loadInitializationFromJson(const std::string &filePath){
                 continue;
             }
 
-            std::vector<ColumnIndex> combination;
+            ColumnCombination combination;
             combination.reserve(combinationJson.size());
 
             for(const auto &value : combinationJson){
