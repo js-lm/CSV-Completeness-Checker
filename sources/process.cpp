@@ -72,12 +72,19 @@ void NaNalyzer::process(){
 			displayIndices.push_back(columnOffset + 1);
 		}
 
+		const long long int validRowCount{validCounts_[combinationIndex]};
 		double completenessPercentage{.0};
 		if(totalRowCount > 0){
-			completenessPercentage = (static_cast<double>(validCounts_[combinationIndex]) / static_cast<double>(totalRowCount)) * 100.0;
+			completenessPercentage = (static_cast<double>(validRowCount) / static_cast<double>(totalRowCount)) * 100.0;
 		}
 
-		fmt::println("[{}] : {:.2f}%", fmt::join(displayIndices, ":"), completenessPercentage);
+		fmt::println(
+			"[{}] : {} / {} ({:.2f}%)",
+			fmt::join(displayIndices, ":"),
+			validRowCount,
+			totalRowCount,
+			completenessPercentage
+		);
 	}
 
 	fmt::println("\nDone.");
