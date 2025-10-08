@@ -24,17 +24,11 @@ int NaNalyzer::run(){
 		if(columnCombinationsToCheck_.empty()) defineColumnCombinations();	
 
 		auto parseYesNo{[](const std::string &input, const bool defaultValue){
-			if(input.empty()){
-				return defaultValue;
-			}
+			if(input.empty()) return defaultValue;
 
 			const char firstCharacter{static_cast<char>(std::tolower(static_cast<unsigned char>(input.front())))};
-			if(firstCharacter == 'y'){
-				return true;
-			}
-			if(firstCharacter == 'n'){
-				return false;
-			}
+			if(firstCharacter == 'y') return true;
+			if(firstCharacter == 'n') return false;
 
 			return defaultValue;
 		}};

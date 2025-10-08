@@ -112,11 +112,9 @@ void NaNalyzer::loadInitializationFromJson(const std::string &filePath){
 
     columns_.clear();
     if(root.contains("columns")){
-        for(const auto &columnJson : root["columns"]) {
-            if(!columnJson.contains("field_number")) {
-                throw std::runtime_error{"Each column entry must include 'field_number'."};
-            }
-
+        for(const auto &columnJson : root["columns"]){
+            if(!columnJson.contains("field_number")) throw std::runtime_error{"Each column entry must include 'field_number'."};
+        
             int fieldNumber{columnJson.at("field_number").get<int>()};
             if(fieldNumber < 1 || fieldNumber > static_cast<int>(headers_.size())){
                 throw std::runtime_error{fmt::format("Column field_number {} is out of range for the CSV headers.", fieldNumber)};
@@ -138,10 +136,8 @@ void NaNalyzer::loadInitializationFromJson(const std::string &filePath){
 
     columnCombinationsToCheck_.clear();
     if(root.contains("combinations")){
-        for(const auto &combinationJson : root["combinations"]) {
-            if(!combinationJson.is_array()) {
-                continue;
-            }
+        for(const auto &combinationJson : root["combinations"]){
+            if(!combinationJson.is_array()) continue;
 
             ColumnCombination combination;
             combination.reserve(combinationJson.size());

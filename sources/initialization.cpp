@@ -215,7 +215,24 @@ void NaNalyzer::defineColumnCombinations(){
 
 	fmt::println("\n--- Define Field Combinations ---");
 	fmt::println("Enter combinations of the field numbers above, separated by colons (e.g., 1:3 or 1:3:4).");
-	fmt::println("Provide all combinations as a single comma separated list (e.g., 1, 3, 1:3).> ");
+
+	std::vector<int> sortedColumnIdentifiers;
+	sortedColumnIdentifiers.reserve(columns_.size());
+
+	for(const auto &columnEntry : columns_){
+		sortedColumnIdentifiers.push_back(columnEntry.first);
+	}
+
+	std::sort(sortedColumnIdentifiers.begin(), sortedColumnIdentifiers.end());
+
+	if(!sortedColumnIdentifiers.empty()){
+		fmt::println(
+			"Default combination uses all selected fields: [{}]",
+			fmt::join(sortedColumnIdentifiers, ":")
+		);
+	}
+
+	fmt::println("Provide all combinations as a single comma separated list (e.g., 1, 3, 1:3), or press Enter to use the default above.");
 
 	clearInputBuffer();
 	std::string combinationInput;
@@ -223,14 +240,42 @@ void NaNalyzer::defineColumnCombinations(){
 
 	columnCombinationsToCheck_.clear();
 
+	const bool hasNonWhitespaceInput{
+		std::any_of(
+			combinationInput.begin(),
+			combinationInput.end(),
+			[](unsigned char character){ return !std::isspace(character);}
+		)
+	};
+
+	if(!hasNonWhitespaceInput){
+		if(sortedColumnIdentifiers.empty()){
+			throw std::runtime_error{"No fields were selected. Cannot define combinations."};
+		}
+
+		ColumnCombination defaultCombination;
+		defaultCombination.reserve(sortedColumnIdentifiers.size());
+
+		for(const int columnIdentifier : sortedColumnIdentifiers){
+			const Column &columnDefinition{columns_.at(columnIdentifier)};
+			defaultCombination.push_back(columnDefinition.index);
+		}
+
+		columnCombinationsToCheck_.push_back(std::move(defaultCombination));
+		fmt::println(
+			"Using default combination: [{}]",
+			fmt::join(sortedColumnIdentifiers, ":")
+		);
+		return;
+	}
+
 	DelimitedStringList combinationStrings{splitString(combinationInput, ',')};
 
 	for(const std::string &combinationString : combinationStrings){
 		DelimitedStringList indexStrings{splitString(combinationString, ':')};
 
-		if(indexStrings.empty()){
-			continue;
-		}
+		if(indexStrings.empty()) continue;
+		
 
 		ColumnCombination currentCombination;
 		currentCombination.reserve(indexStrings.size());
