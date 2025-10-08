@@ -22,11 +22,17 @@ private:
     std::vector<std::vector<ColumnIndex>> columnCombinationsToCheck_;
     std::vector<long long int> validCounts_;
 
+private:
+    bool configurationLoadedFromJson_{false};
+
 public:
     NaNalyzer() = default;
     ~NaNalyzer() = default;
 
     int run();
+
+    void saveInitializationToJson(const std::string &filePath) const;
+    void loadInitializationFromJson(const std::string &filePath);
 
 private:
     void parseCsv();

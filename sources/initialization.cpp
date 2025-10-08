@@ -1,6 +1,7 @@
 #include "nanalyzer.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -10,46 +11,134 @@
 #include <vector>
 
 #include <fmt/core.h>
+#include <fmt/ranges.h>
 
 #include <csv.h>
 
 void NaNalyzer::parseCsv(){
-	fmt::print("Enter the source CSV file: ");
-	std::cin >> csvFilePath_;
+	fmt::print(
+		"Enter the path to the source CSV file or an initialization JSON file "
+		"(e.g., data.csv or session.json): "
+	);
+	std::string userInput;
+	std::cin >> userInput;
 
-	io::LineReader csvLineReader{csvFilePath_};
-	try{
-		char *headerLine{csvLineReader.next_line()};
-		if(!headerLine){
-			throw std::runtime_error{"No header line found in CSV file."};
+	configurationLoadedFromJson_ = false;
+
+	std::string lowerCasedInput{userInput};
+	std::transform(
+		lowerCasedInput.begin(), lowerCasedInput.end(), lowerCasedInput.begin(),
+		[](unsigned char character){ return static_cast<char>(std::tolower(character));}
+	);
+
+	const bool isJsonInput{lowerCasedInput.ends_with(".json")};
+
+	if(isJsonInput){
+		try{
+			loadInitializationFromJson(userInput);
+			fmt::println("Loaded initialization settings from '{}'.", userInput);
+		}catch(const std::exception &exception){
+			throw std::runtime_error{fmt::format(
+				"Failed to load initialization from '{}'. {}",
+				userInput,
+				exception.what()
+			)};
 		}
-		headers_ = splitString(std::string{headerLine}, ',');
-	}catch(const std::exception &exception){
-		throw std::runtime_error{fmt::format(
-            "Could not open or read file '{}'. {}", 
-            csvFilePath_, exception.what()
-        )};
+	}else{
+		csvFilePath_ = std::move(userInput);
+
+		io::LineReader csvLineReader{csvFilePath_};
+		try{
+			char *headerLine{csvLineReader.next_line()};
+			if(!headerLine){
+				throw std::runtime_error{"No header line found in CSV file."};
+			}
+			headers_ = splitString(std::string{headerLine}, ',');
+		}catch(const std::exception &exception){
+			throw std::runtime_error{fmt::format(
+				"Could not open or read file '{}'. {}",
+				csvFilePath_,
+				exception.what()
+			)};
+		}
 	}
 
-	fmt::print("\n--- Discovered Fields ---\n");
+	clearInputBuffer();
+
+	if(headers_.empty()){
+		throw std::runtime_error{"No header line found in CSV file."};
+	}
+
+	fmt::println("Source CSV file: {}", csvFilePath_);
+
+	fmt::println("\n--- Discovered Fields ---");
 	for(std::size_t headerIndex{0}; headerIndex < headers_.size(); headerIndex++){
-		fmt::print("[{}] {}\n", headerIndex + 1, headers_[headerIndex]);
+		fmt::println("[{}] {}", headerIndex + 1, headers_[headerIndex]);
+	}
+
+	if(configurationLoadedFromJson_ && !columns_.empty()){
+		fmt::println("\n--- Fields loaded from configuration ---");
+		std::vector<int> sortedColumnIdentifiers;
+		sortedColumnIdentifiers.reserve(columns_.size());
+
+		for(const auto &columnEntry : columns_){
+			sortedColumnIdentifiers.push_back(columnEntry.first);
+		}
+
+		std::sort(sortedColumnIdentifiers.begin(), sortedColumnIdentifiers.end());
+
+		for(const int columnIdentifier : sortedColumnIdentifiers){
+			const Column &columnDefinition{columns_.at(columnIdentifier)};
+			fmt::println("[{}] {}", columnIdentifier, columnDefinition.name);
+		}
+	}
+
+	if(configurationLoadedFromJson_ && !columnCombinationsToCheck_.empty()){
+		fmt::println("\n--- Field combinations loaded from configuration ---");
+		for(const auto &combination : columnCombinationsToCheck_){
+			std::vector<int> displayIndices;
+			displayIndices.reserve(combination.size());
+
+			for(const ColumnIndex columnIndexZeroBased : combination){
+				displayIndices.push_back(columnIndexZeroBased + 1);
+			}
+
+			fmt::println("[{}]", fmt::join(displayIndices, ":"));
+		}
 	}
 }
 
 void NaNalyzer::defineInvalidData(){
+	if(configurationLoadedFromJson_ && !columns_.empty()){
+		fmt::println("\n--- Fields loaded from configuration ---");
+		std::vector<int> sortedColumnIdentifiers;
+		sortedColumnIdentifiers.reserve(columns_.size());
+
+		for(const auto &columnEntry : columns_){
+			sortedColumnIdentifiers.push_back(columnEntry.first);
+		}
+
+		std::sort(sortedColumnIdentifiers.begin(), sortedColumnIdentifiers.end());
+
+		for(const int columnIdentifier : sortedColumnIdentifiers){
+			const Column &columnDefinition{columns_.at(columnIdentifier)};
+			fmt::println("[{}] {}", columnIdentifier, columnDefinition.name);
+		}
+		return;
+	}
+
 	if(headers_.empty()){
 		throw std::runtime_error{"No headers were discovered. Cannot define invalid data."};
 	}
 
 	columns_.clear();
 
-	fmt::print("\n--- Select Fields to Analyze ---\n");
-	fmt::print("Enter a field number to add it. Type 'done' when finished.\n");
+	fmt::println("\n--- Select Fields to Analyze ---");
+	fmt::println("Enter a field number to add it. Type 'done' when finished.");
 
 	while(true){
 		fmt::print("Field number to add (or 'done'): ");
-		std::string userInput{};
+		std::string userInput;
 		std::cin >> userInput;
 
 		if(userInput == "done"){
@@ -92,7 +181,7 @@ void NaNalyzer::defineInvalidData(){
 		}
 	}
 
-	fmt::print("\n--- You selected the following fields ---\n");
+	fmt::println("\n--- You selected the following fields ---");
 	std::vector<int> sortedColumnIdentifiers;
 	sortedColumnIdentifiers.reserve(columns_.size());
 
@@ -109,12 +198,27 @@ void NaNalyzer::defineInvalidData(){
 }
 
 void NaNalyzer::defineColumnCombinations(){
+	if(configurationLoadedFromJson_ && !columnCombinationsToCheck_.empty()){
+		fmt::println("\n--- Field combinations loaded from configuration ---");
+		for(const auto &combination : columnCombinationsToCheck_){
+			std::vector<int> displayIndices;
+			displayIndices.reserve(combination.size());
+
+			for(const ColumnIndex columnIndexZeroBased : combination){
+				displayIndices.push_back(columnIndexZeroBased + 1);
+			}
+
+			fmt::println("[{}]", fmt::join(displayIndices, ":"));
+		}
+		return;
+	}
+
 	fmt::println("\n--- Define Field Combinations ---");
 	fmt::println("Enter combinations of the field numbers above, separated by colons (e.g., 1:3 or 1:3:4).");
 	fmt::println("Provide all combinations as a single comma separated list (e.g., 1, 3, 1:3).> ");
 
 	clearInputBuffer();
-	std::string combinationInput{};
+	std::string combinationInput;
 	std::getline(std::cin, combinationInput);
 
 	columnCombinationsToCheck_.clear();
