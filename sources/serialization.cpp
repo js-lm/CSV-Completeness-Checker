@@ -13,6 +13,7 @@
 #include <utility>
 #include <algorithm>
 
+#include "constants.hpp"
 
 void NaNalyzer::saveInitializationToJson(const std::string &filePath) const{
     if(csvFilePath_.empty()){
@@ -20,6 +21,7 @@ void NaNalyzer::saveInitializationToJson(const std::string &filePath) const{
     }
 
     nlohmann::json root;
+    root["version"] = Constants::Version;
     root["csv_file"] = csvFilePath_;
     root["headers"] = headers_;
 

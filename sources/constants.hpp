@@ -3,6 +3,7 @@
 namespace Constants{
 
     constexpr const char *Title{"CSV-Completeness-Checker"};
+    constexpr const char *Version{PROJECT_VERSION};
 
     constexpr const char *DefaultBaseJsonName{"csv_completeness_checker"};
 
