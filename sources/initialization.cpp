@@ -127,54 +127,79 @@ void NaNalyzer::defineInvalidData(){
 	columns_.clear();
 
 	fmt::println("\n--- Select Fields to Analyze ---");
-	fmt::println("Enter a field number to add it. Type 'done' when finished.");
+	fmt::println("Enter the field numbers to include, separated by commas (e.g., 1, 2, 6).");
 
-	while(true){
-		fmt::print("Field number to add (or 'done'): ");
-		std::string userInput;
-		std::cin >> userInput;
+	const auto trimWhitespace{[](const std::string &value) -> std::string{
+		const std::size_t firstNonWhitespace{value.find_first_not_of(" \t\n\r")};
+		if(firstNonWhitespace == std::string::npos) return {};
+		const std::size_t lastNonWhitespace{value.find_last_not_of(" \t\n\r")};
+		return value.substr(firstNonWhitespace, lastNonWhitespace - firstNonWhitespace + 1);
+	}};
 
-		if(userInput == "done"){
-			if(columns_.empty()){
-				throw std::runtime_error{"No fields were selected. Exiting..."};
-			}
-			break;
+	while(columns_.empty()){
+		fmt::print("Field numbers: ");
+		std::string selectionInput;
+		std::getline(std::cin, selectionInput);
+
+		const bool hasNonWhitespaceInput{
+			std::any_of(
+				selectionInput.begin(),
+				selectionInput.end(),
+				[](unsigned char character){ return !std::isspace(character);} 
+			)
+		};
+
+		if(!hasNonWhitespaceInput){
+			fmt::println(stderr, "No fields were provided. Please enter at least one field number.");
+			continue;
 		}
 
-		try{
-			int fieldNumber{std::stoi(userInput)};
-			if(fieldNumber < 1 || fieldNumber > static_cast<int>(headers_.size())){
-				fmt::println(stderr, "Invalid number. Please enter a number between 1 and {}.", headers_.size());
-				continue;
+		DelimitedStringList selectedTokens{splitString(selectionInput, ',')};
+		std::unordered_set<int> selectedFieldNumbers;
+		bool isInputValid{true};
+
+		for(const std::string &token : selectedTokens){
+			const std::string trimmedToken{trimWhitespace(token)};
+			if(trimmedToken.empty()){
+				fmt::println(stderr, "Found an empty entry between commas. Please provide valid field numbers.");
+				isInputValid = false;
+				break;
 			}
 
-			if(columns_.contains(fieldNumber)){
-				fmt::println("Field {} is already selected.", fieldNumber);
-				continue;
+			try{
+				int fieldNumber{std::stoi(trimmedToken)};
+				if(fieldNumber < 1 || fieldNumber > static_cast<int>(headers_.size())){
+					fmt::println(stderr, "Field {} is out of range. Valid range is 1 to {}.", fieldNumber, headers_.size());
+					isInputValid = false;
+					break;
+				}
+
+				selectedFieldNumbers.insert(fieldNumber);
+			}catch(const std::exception &){
+				fmt::println(stderr, "'{}' is not a valid number. Please try again.", trimmedToken);
+				isInputValid = false;
+				break;
 			}
+		}
 
-			fmt::print(" -> For field '{}', list any values that count as empty (comma separated, or press Enter for none): ", headers_[fieldNumber - 1]);
-			clearInputBuffer();
-			std::string invalidValuesInput;
-			std::getline(std::cin, invalidValuesInput);
+		if(!isInputValid){
+			columns_.clear();
+			continue;
+		}
 
+		if(selectedFieldNumbers.empty()){
+			fmt::println(stderr, "No valid field numbers were detected. Please try again.");
+			continue;
+		}
+
+		for(const int fieldNumber : selectedFieldNumbers){
 			Column columnDefinition;
 			columnDefinition.index = fieldNumber - 1;
 			columnDefinition.name = headers_[fieldNumber - 1];
-
-			DelimitedStringList invalidValuesList{splitString(invalidValuesInput, ',')};
-			columnDefinition.invalidValues = InvalidValueSet{invalidValuesList.begin(), invalidValuesList.end()};
-
 			columns_.emplace(fieldNumber, std::move(columnDefinition));
-			fmt::println("Added field: {}", headers_[fieldNumber - 1]);
-		}catch(const std::invalid_argument &){
-			fmt::println(stderr, "Invalid input. Please enter a number or 'done'.");
-		}catch(const std::out_of_range &){
-			fmt::println(stderr, "Invalid number. Please try again.");
 		}
 	}
 
-	fmt::println("\n--- You selected the following fields ---");
 	std::vector<int> sortedColumnIdentifiers;
 	sortedColumnIdentifiers.reserve(columns_.size());
 
@@ -184,9 +209,165 @@ void NaNalyzer::defineInvalidData(){
 
 	std::sort(sortedColumnIdentifiers.begin(), sortedColumnIdentifiers.end());
 
+	fmt::println("\n--- Selected Fields ---");
 	for(const int columnIdentifier : sortedColumnIdentifiers){
 		const Column &columnDefinition{columns_.at(columnIdentifier)};
 		fmt::println("[{}] {}", columnIdentifier, columnDefinition.name);
+	}
+
+	fmt::println("\n--- Define Invalid or Empty Values ---");
+	fmt::println("Select a field number to add invalid values, or press Enter/'done' when finished.");
+
+	while(true){
+		fmt::println("\nCurrent invalid value definitions:");
+		for(const int columnIdentifier : sortedColumnIdentifiers){
+			const Column &columnDefinition{columns_.at(columnIdentifier)};
+			std::vector<std::string> invalidValuesDisplay{columnDefinition.invalidValues.begin(), columnDefinition.invalidValues.end()};
+			std::sort(invalidValuesDisplay.begin(), invalidValuesDisplay.end());
+			std::string invalidValuesJoined;
+			if(!invalidValuesDisplay.empty()){
+				invalidValuesJoined = fmt::format("{}", fmt::join(invalidValuesDisplay, ", "));
+			}
+
+			fmt::println(
+				"[{}] {}{}",
+				columnIdentifier,
+				columnDefinition.name,
+				invalidValuesJoined.empty() ? ":" : fmt::format(": {}", invalidValuesJoined)
+			);
+		}
+
+		fmt::print("Field number to update (or press Enter/'done'): ");
+		std::string selection;
+		std::getline(std::cin, selection);
+		std::string trimmedSelection{trimWhitespace(selection)};
+
+		std::string loweredSelection{trimmedSelection};
+		std::transform(
+			loweredSelection.begin(), loweredSelection.end(), loweredSelection.begin(),
+			[](unsigned char character){ return static_cast<char>(std::tolower(character));}
+		);
+
+		if(trimmedSelection.empty() || loweredSelection == "done") break;
+
+		int selectedFieldNumber{0};
+		try{
+			selectedFieldNumber = std::stoi(trimmedSelection);
+		}catch(const std::exception &){
+			fmt::println(stderr, "'{}' is not a valid number. Please choose one of the listed fields.", trimmedSelection);
+			continue;
+		}
+
+		if(!columns_.contains(selectedFieldNumber)){
+			fmt::println(stderr, "Field {} is not in the selected list. Please choose one of the listed fields.", selectedFieldNumber);
+			continue;
+		}
+
+		Column &selectedColumn{columns_.at(selectedFieldNumber)};
+		bool replaceExisting{false};
+
+		if(selectedColumn.invalidValues.empty()){
+			fmt::println("'{}' doesn't have any invalid values yet. New entries will be added to the list.", selectedColumn.name);
+		}else{
+			while(true){
+				fmt::print(
+					"Would you like to replace the existing invalid values for '{}' or add to them? (replace/add) [add]: ",
+					selectedColumn.name
+				);
+				std::string actionInput;
+				std::getline(std::cin, actionInput);
+				std::string trimmedAction{trimWhitespace(actionInput)};
+				std::transform(
+					trimmedAction.begin(), trimmedAction.end(), trimmedAction.begin(),
+					[](unsigned char character){ return static_cast<char>(std::tolower(character));}
+				);
+
+				if(trimmedAction.empty() || trimmedAction.starts_with('a')){
+					replaceExisting = false;
+					break;
+				}
+
+				if(trimmedAction.starts_with('r')){
+					replaceExisting = true;
+					break;
+				}
+
+				fmt::println(stderr, "Unrecognized choice '{}'. Please type 'replace', 'add', or press Enter for the default (add).", actionInput);
+			}
+		}
+
+		fmt::print(
+			"Enter invalid values for '{}' (comma separated, {}): ",
+			selectedColumn.name,
+			replaceExisting ? "leave blank to clear the list" : "leave blank to keep current list"
+		);
+		std::string invalidValuesInput;
+		std::getline(std::cin, invalidValuesInput);
+
+		const bool hasMeaningfulInput{
+			std::any_of(
+				invalidValuesInput.begin(),
+				invalidValuesInput.end(),
+				[](unsigned char character){ return !std::isspace(character);} 
+			)
+		};
+
+		if(!hasMeaningfulInput){
+			if(replaceExisting){
+				selectedColumn.invalidValues.clear();
+				fmt::println("Cleared invalid values for '{}'.", selectedColumn.name);
+			}else{
+				fmt::println("No new values provided for '{}'. Keeping existing list.", selectedColumn.name);
+			}
+			continue;
+		}
+
+		DelimitedStringList invalidValuesList{splitString(invalidValuesInput, ',')};
+		bool addedValues{false};
+
+		if(replaceExisting){
+			selectedColumn.invalidValues.clear();
+		}
+
+		for(const std::string &value : invalidValuesList){
+			const std::string trimmedValue{trimWhitespace(value)};
+			if(trimmedValue.empty()) continue;
+
+			if(selectedColumn.invalidValues.insert(trimmedValue).second){
+				addedValues = true;
+			}
+		}
+
+		if(addedValues){
+			const std::string message{
+				replaceExisting ? "Set invalid values for '{}' to the provided list."
+					: "Updated invalid values for '{}'."
+			};
+			fmt::println(fmt::runtime(message), selectedColumn.name);
+		}else{
+			if(replaceExisting){
+				fmt::println("No non-empty entries were provided. '{}' now has an empty invalid value list.", selectedColumn.name);
+			}else{
+				fmt::println("No new distinct values were added for '{}'.", selectedColumn.name);
+			}
+		}
+	}
+
+	fmt::println("\n--- Final invalid value definitions ---");
+	for(const int columnIdentifier : sortedColumnIdentifiers){
+		const Column &columnDefinition{columns_.at(columnIdentifier)};
+		std::vector<std::string> invalidValuesDisplay{columnDefinition.invalidValues.begin(), columnDefinition.invalidValues.end()};
+		std::sort(invalidValuesDisplay.begin(), invalidValuesDisplay.end());
+		std::string invalidValuesJoined;
+		if(!invalidValuesDisplay.empty()){
+			invalidValuesJoined = fmt::format("{}", fmt::join(invalidValuesDisplay, ", "));
+		}
+		fmt::println(
+			"[{}] {}{}",
+			columnIdentifier,
+			columnDefinition.name,
+			invalidValuesJoined.empty() ? ":" : fmt::format(": {}", invalidValuesJoined)
+		);
 	}
 }
 
