@@ -81,6 +81,9 @@
         "variant": "cpp",
         "csignal": "cpp",
         "forward_list": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "queue": "cpp",
+        "stack": "cpp",
+        "text_encoding": "cpp"
     }
 }

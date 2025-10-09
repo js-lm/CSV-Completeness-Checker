@@ -15,7 +15,7 @@
 #include "constants.hpp"
 
 int NaNalyzer::run(){
-	fmt::println("{}", Constants::Title);
+	fmt::println("{} v{}", Constants::Title, Constants::Version);
 
 	try{
 		parseCsv();
