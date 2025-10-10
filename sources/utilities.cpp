@@ -1,8 +1,8 @@
 #include "nanalyzer.hpp"
 
-#include <sstream>
 #include <iostream>
 #include <limits>
+#include <sstream>
 
 #include <fmt/core.h>
 #include <fmt/ranges.h>
@@ -38,7 +38,11 @@ bool NaNalyzer::isCellValid(
 }
 
 void NaNalyzer::clearInputBuffer() const{
-	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    if(!std::cin.good()) std::cin.clear();
+    std::streambuf *inputBuffer{std::cin.rdbuf()};
+    if(inputBuffer->in_avail() == 0) return;
+
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
 std::string NaNalyzer::formatCombinationForDisplay(
