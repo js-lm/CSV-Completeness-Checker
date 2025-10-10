@@ -1,14 +1,6 @@
 #include "nanalyzer.hpp"
 
-#include <algorithm>
-#include <cctype>
 #include <iostream>
-#include <limits>
-#include <stdexcept>
-#include <string>
-#include <unordered_set>
-#include <utility>
-#include <vector>
 
 #include <fmt/core.h>
 #include <fmt/ranges.h>
@@ -138,8 +130,13 @@ void NaNalyzer::defineInvalidData(){
 
 	while(columns_.empty()){
 		fmt::print("Field numbers: ");
+		if(!std::cin.good()) std::cin.clear();
+		if(std::cin.peek() == '\n') std::cin.ignore();
+		
 		std::string selectionInput;
-		std::getline(std::cin, selectionInput);
+		if(!std::getline(std::cin, selectionInput)){
+			throw std::runtime_error{"Failed to read field selection input."};
+		}
 
 		const bool hasNonWhitespaceInput{
 			std::any_of(
@@ -381,8 +378,6 @@ void NaNalyzer::defineColumnCombinations(){
 	}
 
 	fmt::println("\n--- Define Field Combinations ---");
-	fmt::println("Enter combinations of the field numbers above, separated by colons (e.g., 1:3 or 1:3:4).");
-	fmt::println("Use '/' inside a group to indicate alternatives (e.g., 1:2:3/4 requires 1, 2, and either 3 or 4).");
 
 	std::vector<int> sortedColumnIdentifiers;
 	sortedColumnIdentifiers.reserve(columns_.size());
@@ -393,18 +388,24 @@ void NaNalyzer::defineColumnCombinations(){
 
 	std::sort(sortedColumnIdentifiers.begin(), sortedColumnIdentifiers.end());
 
+	std::string defaultCombinationDisplay;
 	if(!sortedColumnIdentifiers.empty()){
-		fmt::println(
-			"Default combination uses all selected fields: [{}]",
-			fmt::join(sortedColumnIdentifiers, ":")
-		);
+		defaultCombinationDisplay = fmt::format("{}", fmt::join(sortedColumnIdentifiers, ":"));
 	}
 
-	fmt::println("Provide all combinations as a single comma separated list (e.g., 1, 3/4:5, 1:2:3/4), or press Enter to use the default above.");
+	fmt::println("Enter field combinations (\":\" = together, \"/\" = alternatives, \",\" = separate rules)");
+	fmt::println("Example: 1:2:3/4 means fields 1 & 2 and either 3 or 4.");
+	fmt::println("Multiple combos: 1, 2:3, 1:2:3/4");
+	if(!defaultCombinationDisplay.empty()){
+		fmt::println("Leave empty to use all fields [{}].", defaultCombinationDisplay);
+	}
 
-	clearInputBuffer();
+	fmt::print("Combinations: ");
+
 	std::string combinationInput;
-	std::getline(std::cin, combinationInput);
+	if(!std::getline(std::cin, combinationInput)){
+		throw std::runtime_error{"Failed to read field combination input."};
+	}
 
 	columnCombinationsToCheck_.clear();
 
