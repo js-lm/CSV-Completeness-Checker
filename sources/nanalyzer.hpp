@@ -4,6 +4,9 @@
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
+#include <atomic>
+#include <chrono>
+#include <exception>
 
 class NaNalyzer{
     using ColumnOffset = int;   // 0 based position in headers_ and CSV rows
@@ -13,6 +16,8 @@ class NaNalyzer{
     
     using HeaderList = std::vector<std::string>;
     using InvalidValueSet = std::unordered_set<std::string>;
+    
+    using DelimitedStringList = std::vector<std::string>;
 
     using ColumnDisjunction = std::vector<ColumnOffset>; // OR group
     using ColumnCombination = std::vector<ColumnDisjunction>; // AND of OR groups
@@ -53,9 +58,15 @@ private:
     void defineColumnCombinations();
 
     void process();
+    void processCsvRows(
+        std::chrono::steady_clock::duration updateInterval,
+        std::atomic<long long int> &processedRowCount,
+        long long int &totalRowCount,
+        std::atomic<bool> &processingComplete,
+        std::exception_ptr &workerException
+    );
 
 private:
-    using DelimitedStringList = std::vector<std::string>;
     DelimitedStringList splitString(const std::string &string, const char delimiter) const;
 
     void clearInputBuffer() const;
@@ -63,5 +74,4 @@ private:
     bool isCellValid(const std::string &string, const InvalidValueSet &invalidValues) const;
 
     std::string formatCombinationForDisplay(const ColumnCombination &combination) const;
-
 };
