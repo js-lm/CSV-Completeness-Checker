@@ -25,7 +25,7 @@ void NaNalyzer::saveInitializationToJson(const std::string &filePath) const{
         return a.first < b.first;
     });
 
-    nlohmann::json columnsJson = nlohmann::json::array();
+    nlohmann::json columnsJson{nlohmann::json::array()};
     for(const auto &[fieldNumber, columnDefinition] : sortedColumns){
         nlohmann::json columnJson;
         columnJson["field_number"] = fieldNumber;
@@ -40,7 +40,7 @@ void NaNalyzer::saveInitializationToJson(const std::string &filePath) const{
 
     root["columns"] = std::move(columnsJson);
 
-    nlohmann::json combinationsJson = nlohmann::json::array();
+    nlohmann::json combinationsJson{nlohmann::json::array()};
     for(const auto &combination : columnCombinationsToCheck_){
         const bool hasDisjunction{
             std::any_of(
