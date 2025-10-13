@@ -120,6 +120,7 @@ void NaNalyzer::defineInvalidData(){
 
 	fmt::println("\n--- Select Fields to Analyze ---");
 	fmt::println("Enter the field numbers to include, separated by commas (e.g., 1, 2, 6).");
+	fmt::println("Leave empty to select all fields.");
 
 	const auto trimWhitespace{[](const std::string &value) -> std::string{
 		const std::size_t firstNonWhitespace{value.find_first_not_of(" \t\n\r")};
@@ -147,7 +148,13 @@ void NaNalyzer::defineInvalidData(){
 		};
 
 		if(!hasNonWhitespaceInput){
-			fmt::println(stderr, "No fields were provided. Please enter at least one field number.");
+			for(std::size_t i{0}; i < headers_.size(); i++){
+				Column columnDefinition;
+				columnDefinition.index = i;
+				columnDefinition.name = headers_[i];
+				columns_.emplace(static_cast<int>(i + 1), std::move(columnDefinition));
+			}
+			fmt::println("Selected all {} fields.", headers_.size());
 			continue;
 		}
 
@@ -213,7 +220,7 @@ void NaNalyzer::defineInvalidData(){
 	}
 
 	fmt::println("\n--- Define Invalid or Empty Values ---");
-	fmt::println("Select a field number to add invalid values, or press Enter/'done' when finished.");
+	fmt::println("Select a field number to add invalid values, or type 'done' when finished.");
 
 	while(true){
 		fmt::println("\nCurrent invalid value definitions:");
@@ -234,7 +241,7 @@ void NaNalyzer::defineInvalidData(){
 			);
 		}
 
-		fmt::print("Field number to update (or press Enter/'done'): ");
+		fmt::print("Field number to update (or type 'done'): ");
 		std::string selection;
 		std::getline(std::cin, selection);
 		std::string trimmedSelection{trimWhitespace(selection)};
@@ -245,7 +252,12 @@ void NaNalyzer::defineInvalidData(){
 			[](unsigned char character){ return static_cast<char>(std::tolower(character));}
 		);
 
-		if(trimmedSelection.empty() || loweredSelection == "done") break;
+		if(loweredSelection == "done") break;
+
+		if(trimmedSelection.empty()){
+			fmt::println(stderr, "Please enter a field number or type 'done' to finish.");
+			continue;
+		}
 
 		int selectedFieldNumber{0};
 		try{
