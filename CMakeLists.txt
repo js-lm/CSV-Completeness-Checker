@@ -44,6 +44,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
+FetchContent_Declare(
+    cxxopts
+    GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
+    GIT_TAG        v3.3.1
+)
+FetchContent_MakeAvailable(cxxopts)
+
 
 
 # define PROJECT_SOURCES
@@ -66,12 +73,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     fmt::fmt
     nlohmann_json::nlohmann_json
+    cxxopts::cxxopts
 )
 
 
 
 # statically link the gcc and std libraries for linux
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_options(${PROJECT_NAME} PRIVATE "-static-libgcc" "-static-libstdc++")
-endif()
+# if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+#     target_link_options(${PROJECT_NAME} PRIVATE "-static-libgcc" "-static-libstdc++")
+# endif()
 
