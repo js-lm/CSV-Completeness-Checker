@@ -1,14 +1,15 @@
-# CSV Completeness Checker
+## CSV Completeness Checker
 
 A fast and easy-to-use tool that analyzes CSV files for data completeness by checking for missing/invalid values across different column combinations.
 
-## Features
+### Features
 
   * Checks for missing or invalid values across user defined column combinations.
   * Saves and loads analysis configurations to and from JSON files for easy reuse.
   * Interactive command line interface to guide you through the analysis setup.
+  * Full command line automation support for scripting and batch processing.
 
-## Build
+### Build
 
 Just let CMake do its magic.
 
@@ -16,9 +17,18 @@ Just let CMake do its magic.
 
 > * fast-cpp-csv-parser
 > * nlohmann_json
+> * cxxopts
 > * fmt
 
-## Usage
+### Usage
+
+#### Interactive Mode
+
+Run the application without arguments to use the interactive mode:
+
+```
+./csv-completeness-checker
+```
 
 The application will guide you through the following steps:
 
@@ -49,3 +59,24 @@ The application will guide you through the following steps:
 6. **Process the CSV:**
 
       * The tool will then process the CSV file and output the results for each column combination, showing both the raw counts (valid rows / total rows) and the completeness percentage.
+
+#### Command Line Mode
+
+Use command line arguments to automate the analysis without interactive prompts:
+
+```
+./csv-completeness-checker [OPTIONS]
+```
+
+**Options:**
+
+| Argument | Description |
+|-|-|
+| `--csv, -c` | Path to CSV file to analyze |
+| `--config, -C` | Path to JSON configuration file (overrides --csv) |
+| `--output, -o` | Path to save output JSON configuration |
+| `--fields, -f` | Comma-separated field numbers to analyze |
+| `--invalid-values, -i` | Invalid values mapping (format: `field:value1,value2:field:value3...`) |
+| `--combinations, -b` | Column combinations to check (format: `1:2,1:3/4`) |
+| `--silent, -q` | Minimal output (only results) |
+| `--help, -h` | Display help message |
