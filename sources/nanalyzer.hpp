@@ -7,6 +7,17 @@
 #include <atomic>
 #include <chrono>
 #include <exception>
+#include <optional>
+
+struct CLIConfig{
+    std::optional<std::string> csvFilePath;
+    std::optional<std::string> configFilePath;
+    std::optional<std::string> outputFilePath;
+    std::optional<std::string> fieldsInput;
+    std::optional<std::string> invalidValuesInput;
+    std::optional<std::string> combinationsInput;
+    bool silent{false};
+};
 
 class NaNalyzer{
     using ColumnOffset = int;   // 0 based position in headers_ and CSV rows
@@ -42,12 +53,13 @@ private:
 
 private:
     bool configurationLoadedFromJson_{false};
+    bool silentMode_{false};
 
 public:
     NaNalyzer() = default;
     ~NaNalyzer() = default;
 
-    int run();
+    int run(const CLIConfig &config = CLIConfig{});
 
     void saveInitializationToJson(const FilePath &filePath) const;
     void loadInitializationFromJson(const FilePath &filePath);

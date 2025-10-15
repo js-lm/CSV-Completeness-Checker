@@ -89,7 +89,7 @@ void NaNalyzer::process(){
 	static_assert(Constants::ProgressUpdateInterval.count() > 0, "Progress update interval must be positive.");
 	const auto updateInterval{Constants::ProgressUpdateInterval};
 
-	fmt::println("\nProcessing...");
+	if(!silentMode_) fmt::println("\nProcessing...");
 
 	validCounts_.assign(columnCombinationsToCheck_.size(), 0);
 
@@ -123,7 +123,7 @@ void NaNalyzer::process(){
 		const auto now{std::chrono::steady_clock::now()};
 		if(now >= nextProgressDisplay){
 			const long long int rowsProcessed{processedRowCount.load(std::memory_order_relaxed)};
-			if(rowsProcessed > 0 && rowsProcessed != lastDisplayedRowCount){
+			if(!silentMode_ && rowsProcessed > 0 && rowsProcessed != lastDisplayedRowCount){
 				const std::string progressMessage{fmt::format("Processed {} rows...", rowsProcessed)};
 				if(progressMessage.size() > maxProgressMessageWidth){
 					maxProgressMessageWidth = progressMessage.size();
@@ -147,7 +147,7 @@ void NaNalyzer::process(){
 	}
 
 	const long long int finalRowsProcessed{processedRowCount.load(std::memory_order_relaxed)};
-	if(finalRowsProcessed > lastDisplayedRowCount && finalRowsProcessed > 0){
+	if(!silentMode_ && finalRowsProcessed > lastDisplayedRowCount && finalRowsProcessed > 0){
 		const std::string progressMessage{fmt::format("Processed {} rows...", finalRowsProcessed)};
 		if(progressMessage.size() > maxProgressMessageWidth){
 			maxProgressMessageWidth = progressMessage.size();
@@ -156,17 +156,21 @@ void NaNalyzer::process(){
 		std::fflush(stdout);
 		hasDisplayedProgress = true;
 	}
-	if(hasDisplayedProgress) fmt::print("\n");
+	if(!silentMode_ && hasDisplayedProgress) fmt::print("\n");
 
-	fmt::println("\n--- Results ---");
+	if(!silentMode_) fmt::println("\n--- Results ---");
 
 	if(totalRowCount == 0){
-		fmt::println("No data rows found to process.");
-		fmt::println("\nDone.");
+		if(!silentMode_){
+			fmt::println("No data rows found to process.");
+			fmt::println("\nDone.");
+		}
 		return;
 	}
 
-	fmt::println("Processed {} data rows.\n", totalRowCount);
+	if(!silentMode_){
+		fmt::println("Processed {} data rows.\n", totalRowCount);
+	}
 
 	for(std::size_t combinationIndex{0}; combinationIndex < columnCombinationsToCheck_.size(); combinationIndex++){
 		const long long int validRowCount{validCounts_[combinationIndex]};
@@ -184,5 +188,5 @@ void NaNalyzer::process(){
 		);
 	}
 
-	fmt::println("\nDone.");
+	if(!silentMode_) fmt::println("\nDone.");
 }
