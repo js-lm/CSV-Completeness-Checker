@@ -9,10 +9,10 @@
 
 void NaNalyzer::processCsvRows(
 	std::chrono::steady_clock::duration updateInterval,
-	std::atomic<long long int> &processedRowCount,
-	long long int &totalRowCount,
-	std::atomic<bool> &processingComplete,
-	std::exception_ptr &workerException
+	std::atomic<long long int> 			&processedRowCount,
+	long long int 						&totalRowCount,
+	std::atomic<bool> 					&processingComplete,
+	std::exception_ptr 					&workerException
 ){
 	auto lastProgressUpdate{std::chrono::steady_clock::now()};
 	long long int totalRowCountLocal{0};
@@ -172,20 +172,28 @@ void NaNalyzer::process(){
 		fmt::println("Processed {} data rows.\n", totalRowCount);
 	}
 
-	for(std::size_t combinationIndex{0}; combinationIndex < columnCombinationsToCheck_.size(); combinationIndex++){
-		const long long int validRowCount{validCounts_[combinationIndex]};
-		double completenessPercentage{.0};
-		if(totalRowCount > 0){
-			completenessPercentage = (static_cast<double>(validRowCount) / static_cast<double>(totalRowCount)) * 100.0;
-		}
+	if(outputFormat_ == OutputFormat::JSON){
+		fmt::println("{}", formatResultsAsJson(totalRowCount));
+	}else if(outputFormat_ == OutputFormat::CSV){
+		fmt::println("{}", formatResultsAsCsv(totalRowCount));
+	}else if(outputFormat_ == OutputFormat::KEYVALUE){
+		fmt::println("{}", formatResultsAsKeyValue(totalRowCount));
+	}else{
+		for(std::size_t combinationIndex{0}; combinationIndex < columnCombinationsToCheck_.size(); combinationIndex++){
+			const long long int validRowCount{validCounts_[combinationIndex]};
+			float completenessPercentage{.0f};
+			if(totalRowCount > 0){
+				completenessPercentage = (static_cast<float>(validRowCount) / static_cast<float>(totalRowCount)) * 100.0f;
+			}
 
-		fmt::println(
-			"[{}] : {} / {} ({:.2f}%)",
-			formatCombinationForDisplay(columnCombinationsToCheck_[combinationIndex]),
-			validRowCount,
-			totalRowCount,
-			completenessPercentage
-		);
+			fmt::println(
+				"[{}] : {} / {} ({:.2f}%)",
+				formatCombinationForDisplay(columnCombinationsToCheck_[combinationIndex]),
+				validRowCount,
+				totalRowCount,
+				completenessPercentage
+			);
+		}
 	}
 
 	if(!silentMode_) fmt::println("\nDone.");
