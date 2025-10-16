@@ -78,5 +78,6 @@ Use command line arguments to automate the analysis without interactive prompts:
 | `--fields, -f` | Comma-separated field numbers to analyze |
 | `--invalid-values, -i` | Invalid values mapping (format: `field:value1,value2:field:value3...`) |
 | `--combinations, -b` | Column combinations to check (format: `1:2,1:3/4`) |
+| `--format` | Output format: `text`, `json`, `csv`, or `keyvalue` (will also enable quiet mode) |
 | `--silent, -q` | Minimal output (only results) |
 | `--help, -h` | Display help message |
