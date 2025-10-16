@@ -9,6 +9,13 @@
 #include <exception>
 #include <optional>
 
+enum class OutputFormat{
+    TEXT,
+    JSON,
+    CSV,
+    KEYVALUE
+};
+
 struct CLIConfig{
     std::optional<std::string> csvFilePath;
     std::optional<std::string> configFilePath;
@@ -17,6 +24,7 @@ struct CLIConfig{
     std::optional<std::string> invalidValuesInput;
     std::optional<std::string> combinationsInput;
     bool silent{false};
+    OutputFormat outputFormat{OutputFormat::TEXT};
 };
 
 class NaNalyzer{
@@ -54,6 +62,7 @@ private:
 private:
     bool configurationLoadedFromJson_{false};
     bool silentMode_{false};
+    OutputFormat outputFormat_{OutputFormat::TEXT};
 
 public:
     NaNalyzer() = default;
@@ -86,4 +95,8 @@ private:
     bool isCellValid(const std::string &string, const InvalidValueSet &invalidValues) const;
 
     std::string formatCombinationForDisplay(const ColumnCombination &combination) const;
+
+    std::string formatResultsAsJson(long long int totalRowCount) const;
+    std::string formatResultsAsCsv(long long int totalRowCount) const;
+    std::string formatResultsAsKeyValue(long long int totalRowCount) const;
 };

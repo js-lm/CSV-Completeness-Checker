@@ -5,11 +5,13 @@
 
 #include <csv.h>
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 #include "constants.hpp"
 
 int NaNalyzer::run(const CLIConfig &config){
 	silentMode_ = config.silent;
+	outputFormat_ = config.outputFormat;
 
 	if(!silentMode_){
 		fmt::println("{} v{}", Constants::Title, Constants::Version);
@@ -362,4 +364,65 @@ int NaNalyzer::run(const CLIConfig &config){
 	}
 
 	return 0;
+}
+
+std::string NaNalyzer::formatResultsAsJson(long long int totalRowCount) const{
+	nlohmann::json root;
+	root["version"] = Constants::Version;
+	root["total_rows"] = totalRowCount;
+	
+	nlohmann::json resultsArray{nlohmann::json::array()};
+	for(std::size_t combinationIndex{0}; combinationIndex < columnCombinationsToCheck_.size(); combinationIndex++){
+		const long long int validRowCount{validCounts_[combinationIndex]};
+		float completeness{.0f};
+		if(totalRowCount > 0){
+			completeness = static_cast<float>(validRowCount) / static_cast<float>(totalRowCount);
+		}
+
+		nlohmann::json resultObject;
+		resultObject["combination"] = formatCombinationForDisplay(columnCombinationsToCheck_[combinationIndex]);
+		resultObject["valid_rows"] = validRowCount;
+		resultObject["total_rows"] = totalRowCount;
+		resultObject["completeness"] = completeness;
+
+		resultsArray.push_back(std::move(resultObject));
+	}
+	root["results"] = std::move(resultsArray);
+
+	return root.dump(2);
+}
+
+std::string NaNalyzer::formatResultsAsCsv(long long int totalRowCount) const{
+	std::string csvOutput;
+	for(std::size_t combinationIndex{0}; combinationIndex < columnCombinationsToCheck_.size(); combinationIndex++){
+		const long long int validRowCount{validCounts_[combinationIndex]};
+		float completeness{.0f};
+		if(totalRowCount > 0){
+			completeness = static_cast<float>(validRowCount) / static_cast<float>(totalRowCount);
+		}
+
+		if(combinationIndex > 0) csvOutput += ',';
+
+		csvOutput += fmt::format("{:.2f}", completeness);
+	}
+	return csvOutput;
+}
+
+std::string NaNalyzer::formatResultsAsKeyValue(long long int totalRowCount) const{
+	std::string keyValueOutput;
+	for(std::size_t combinationIndex{0}; combinationIndex < columnCombinationsToCheck_.size(); combinationIndex++){
+		const long long int validRowCount{validCounts_[combinationIndex]};
+		float completeness{.0f};
+		if(totalRowCount > 0){
+			completeness = static_cast<float>(validRowCount) / static_cast<float>(totalRowCount);
+		}
+
+		if(combinationIndex > 0) keyValueOutput += ' ';
+		
+		keyValueOutput += fmt::format("{}={:.2f}", 
+			formatCombinationForDisplay(columnCombinationsToCheck_[combinationIndex]),
+			completeness
+		);
+	}
+	return keyValueOutput;
 }

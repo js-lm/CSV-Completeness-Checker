@@ -17,6 +17,7 @@ int main(int argumentCount, char *arguments[]){
         ("f,fields", "Comma-separated field numbers to analyze (e.g., 1,2,3,5)", cxxopts::value<std::string>())
         ("i,invalid-values", "Invalid values mapping (format: field:value1,value2:field:value3...)", cxxopts::value<std::string>())
         ("b,combinations", "Column combinations to check (format: 1:2,1:3/4)", cxxopts::value<std::string>())
+        ("format", "Output format: text, json, csv, or keyvalue (force quiet mode) (default: text)", cxxopts::value<std::string>()->default_value("text"))
         ("q,silent", "Minimal output (only results)", cxxopts::value<bool>()->default_value("false"))
         ("h,help", "Print help")
     ;
@@ -48,6 +49,21 @@ int main(int argumentCount, char *arguments[]){
         }
         if(parseResult.count("combinations")){
             config.combinationsInput = parseResult["combinations"].as<std::string>();
+        }
+        if(parseResult.count("format")){
+            std::string formatString{parseResult["format"].as<std::string>()};
+            if(formatString == "json"){
+                config.outputFormat = OutputFormat::JSON;
+                config.silent = true;
+            }else if(formatString == "csv"){
+                config.outputFormat = OutputFormat::CSV;
+                config.silent = true;
+            }else if(formatString == "keyvalue"){
+                config.outputFormat = OutputFormat::KEYVALUE;
+                config.silent = true;
+            }else if(formatString != "text"){
+                throw std::invalid_argument{"Invalid format. Choose from: text, json, csv, or keyvalue"};
+            }
         }
         if(parseResult.count("silent")){
             config.silent = parseResult["silent"].as<bool>();
